@@ -1,9 +1,12 @@
+import pandas as pd
 import requests
 from elasticsearch import Elasticsearch
 
-response = requests.get('http://localhost:9200/goodreads/_doc/1')
+user = 1
 
-vector = response.json()['_source']['similarity']
+response = requests.get('http://localhost:9200/goodreads/_doc/' + str(user))
+
+vector = response.json()['_source']['similarity-vector']
 
 # print dimensions of vector
 print(len(vector))
@@ -11,17 +14,35 @@ print(len(vector))
 es = Elasticsearch(
     [
         {
-            'host':"localhost",
-            'port':9200,
+            'host': "localhost",
+            'port': 9200,
             'scheme': "http"
         }
     ],
     http_auth=("elastic", "KgSU+VEYRvPvW09c9czx")
 )
 
-res = es.knn_search(index='goodreads', knn={"field": "similarity", "query_vector": vector, "k": 5, "num_candidates": 10})
+res = es.knn_search(index='goodreads',
+                    knn={"field": "similarity-vector", "query_vector": vector, "k": 5, "num_candidates": 10})
 
-print(res)
+users = []
+
+for hit in res['hits']['hits']:
+    if hit['_id'] != user:
+        users.append((hit['_id'], hit['_score']))
+
+
+
+# load goodreads dataset only for user in user list
+ds = pd.read_csv('ratings.csv')
+ds1 = ds[ds['user_id' == user]]
+ds2 = ds[ds['user_id'].isin(users)]
+
+# interate over ds2 and find a book that user1 has not read
+for index, row in ds2.iterrows():
+    if row['book_id'] not in ds1['book_id']:
+        print(row['book_id'])
+        break
 
 """
 headers = {
