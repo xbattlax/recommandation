@@ -1,15 +1,16 @@
 import pandas as pd
 import requests
 from elasticsearch import Elasticsearch
+import json
 import numpy as np
 user = 1
 
-response = requests.get('http://localhost:9200/goodreads/_doc/' + str(user))
+response = requests.get('http://localhost:9200/goodreads_user/_doc/' + str(user))
 
-vector = response.json()['_source']['similarity-vector']
+# get _doc user
+user = response.json()['_source']
 
 # print dimensions of vector
-print(len(vector))
 # es
 es = Elasticsearch(
     [
@@ -22,62 +23,50 @@ es = Elasticsearch(
     http_auth=("elastic", "KgSU+VEYRvPvW09c9czx")
 )
 
-res = es.knn_search(index='goodreads',
-                    knn={"field": "similarity-vector", "query_vector": vector, "k": 5, "num_candidates": 10})
+res = es.knn_search(index='goodreads_user',
+                    knn={"field": "similarity-vector", "query_vector": user['similarity-vector'], "k": 5, "num_candidates": 10})
 
 users = []
-
+user_books = {}
 for hit in res['hits']['hits']:
     if hit['_id'] != user:
-        users.append((hit['_id'], hit['_score']))
+        books ={}
+        ratings = json.loads(hit['_source']['rating'])
+        # convert to object
+        for book in ratings:
+            books[book['book_id']] = book['rating']
+            user_books[book['book_id']] = book['rating']
+
+        users.append((hit['_id'], hit['_score'], books))
+
+all_books = set(book_id for book_id in user_books.keys())
+unread_books = set(book_id for book_id in all_books if user_books[book_id] == 0)
+
+user_book = json.loads(user['rating'])
+
+set_book = set()
+
+
+list_of_set = []
+
+for book in user_book:
+    responseB = requests.get('http://localhost:9200/goodreads_item/_doc/' + str(book['book_id']))
+    vector = responseB.json()['_source']['similarity-vector']
+    res = es.knn_search(index='goodreads_item',
+                    knn={"field": "similarity-vector", "query_vector": vector, "k": 5, "num_candidates": 1000})
+    for hit in res['hits']['hits']:
+        if hit['_id'] != book['book_id']:
+            set_book.add(int(hit['_id']))
+    list_of_set.append(set_book)
+
+
+# combine all set
 
 
 
-# load goodreads dataset only for user in user list
-ds = pd.read_csv('goodreads_interactions_reduced.csv')
+set_book = set.union(*list_of_set)
 
-print(ds.head())
-# make user in line and book in column
-ds = ds.pivot(index='user_id', columns='book_id', values='rating')
+inter = set.intersection(set_book, unread_books)
 
+print(inter)
 
-
-
-print(ds.head())
-# count
-
-# get line of user
-vector_user = ds.iloc[user].tolist()
-vectors = [ds.iloc[int(user[0])].tolist() for user in users]
-
-# lu par v mais pas vector_user
-for j in range(len(vectors)):
-    read_by_vector1 = np.where(vectors[j] != 0)
-    read_by_vector2 = np.where(vector_user != 0)
-
-    difference = np.setdiff1d(read_by_vector1, read_by_vector2)
-    print(difference)
-    res = [(i, vectors[j][i]*users[j][1]) for i in difference]
-    print(res)
-
-
-"""
-headers = {
-    'Content-Type': 'application/json',
-}
-
-json_data = {
-    'knn': {
-        'field': 'similarity',
-        'query_vector': vector,
-        'k': 10,
-        'num_candidates': 10,
-    },
-    'fields': [
-        '_id',
-    ],
-}
-
-response = requests.post('http://localhost:9200/goodreads/_search?pretty', headers=headers, json=json_data)
-
-print(response.json())"""

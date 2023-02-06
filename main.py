@@ -93,7 +93,7 @@ es.indices.create(index='goodreads_user', body={
 # es.index(index='goodreads', id=1, body={'similarity': df.iloc[1].tolist()})
 # Index user based similarity matrix by user_id
 for i in range(0, nbUser):
-    json_rating_user = ds[ds['user_id'] == i]['rating'].tolist()
+    json_rating_user = ds[ds['user_id'] == i].to_json(orient='records')
     es.index(index='goodreads_user', id=i, body={'similarity-vector': reduced_sim[i].tolist(), 'rating': json_rating_user})
 # for i in range(0, nbUser):
 #    es.index(index='goodreads', doc_type='user', id=i, body={'similarity': df.iloc[i].tolist()})
