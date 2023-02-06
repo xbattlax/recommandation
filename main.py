@@ -20,7 +20,7 @@ n = 100
 
 # skip row after row 2286483
 
-ds = pd.read_csv('goodreads_interactions.csv', nrows=2286483)
+ds = pd.read_csv('goodreads_interactions_reduced.csv')
 # save ds in csv
 ds.to_csv('ratings.csv', index=False)
 nbUser = ds['user_id'].unique().shape[0]
@@ -71,7 +71,7 @@ es = Elasticsearch(
 )
 
 # Create a new index with similarity is a dense vector
-es.indices.create(index='goodreads', body={
+es.indices.create(index='goodreads_user', body={
     "mappings": {
         "properties": {
             "similarity-vector": {
@@ -79,6 +79,11 @@ es.indices.create(index='goodreads', body={
                 "dims": 512,
                 "index": True,
                 "similarity": "l2_norm"
+            },
+            "rating": {
+                "type": "object",
+                "enabled": False
+
             }
         }
     }
@@ -88,7 +93,8 @@ es.indices.create(index='goodreads', body={
 # es.index(index='goodreads', id=1, body={'similarity': df.iloc[1].tolist()})
 # Index user based similarity matrix by user_id
 for i in range(0, nbUser):
-    es.index(index='goodreads', id=i, body={'similarity-vector': reduced_sim[i].tolist()})
+    json_rating_user = ds[ds['user_id'] == i]['rating'].tolist()
+    es.index(index='goodreads_user', id=i, body={'similarity-vector': reduced_sim[i].tolist(), 'rating': json_rating_user})
 # for i in range(0, nbUser):
 #    es.index(index='goodreads', doc_type='user', id=i, body={'similarity': df.iloc[i].tolist()})
 

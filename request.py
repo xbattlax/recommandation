@@ -1,7 +1,7 @@
 import pandas as pd
 import requests
 from elasticsearch import Elasticsearch
-
+import numpy as np
 user = 1
 
 response = requests.get('http://localhost:9200/goodreads/_doc/' + str(user))
@@ -34,15 +34,32 @@ for hit in res['hits']['hits']:
 
 
 # load goodreads dataset only for user in user list
-ds = pd.read_csv('ratings.csv')
-ds1 = ds[ds['user_id' == user]]
-ds2 = ds[ds['user_id'].isin(users)]
+ds = pd.read_csv('goodreads_interactions_reduced.csv')
 
-# interate over ds2 and find a book that user1 has not read
-for index, row in ds2.iterrows():
-    if row['book_id'] not in ds1['book_id']:
-        print(row['book_id'])
-        break
+print(ds.head())
+# make user in line and book in column
+ds = ds.pivot(index='user_id', columns='book_id', values='rating')
+
+
+
+
+print(ds.head())
+# count
+
+# get line of user
+vector_user = ds.iloc[user].tolist()
+vectors = [ds.iloc[int(user[0])].tolist() for user in users]
+
+# lu par v mais pas vector_user
+for j in range(len(vectors)):
+    read_by_vector1 = np.where(vectors[j] != 0)
+    read_by_vector2 = np.where(vector_user != 0)
+
+    difference = np.setdiff1d(read_by_vector1, read_by_vector2)
+    print(difference)
+    res = [(i, vectors[j][i]*users[j][1]) for i in difference]
+    print(res)
+
 
 """
 headers = {
