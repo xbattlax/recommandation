@@ -25,28 +25,28 @@ ds = pd.read_csv('goodreads_interactions_reduced.csv')
 ds.to_csv('ratings.csv', index=False)
 nbUser = ds['user_id'].unique().shape[0]
 nbBook = ds['book_id'].unique().shape[0]
-print("taux de donnée manquante: ", 100 - (ds.shape[0] / (nbUser * nbBook)) * 100, "%")
+#print("taux de donnée manquante: ", 100 - (ds.shape[0] / (nbUser * nbBook)) * 100, "%")
 # ds = pd.read_csv('goodreads_interactions.csv')
 
-print(ds.shape)
+#print(ds.shape)
 # remove is_read column
 ds = ds.drop(columns=['is_read', 'is_reviewed'])
 
-reader = Reader(rating_scale=(1, 5))
-data = Dataset.load_from_df(ds, reader)
+#reader = Reader(rating_scale=(1, 5))
+#data = Dataset.load_from_df(ds, reader)
 
 # Build the user-based collaborative filtering model
 # user_based_cf = KNNWithMeans(k=5, sim_options={'user_based': True})
 # user_based_cf.fit(data.build_full_trainset())
-item_based_cf = KNNBaseline(k=10, sim_options={'name':'pearson_baseline','user_based': False})
-item_based_cf.fit(data.build_full_trainset())
+#item_based_cf = KNNBaseline(k=10, sim_options={'name':'pearson_baseline','user_based': False})
+#item_based_cf.fit(data.build_full_trainset())
 
 # save similarity matrix
 # user_based_cf.compute_similarities()
 
 # save to csv file
-df = pd.DataFrame(item_based_cf.sim)
-df.to_csv('similarity_matrix_itembased.csv', index=False)
+#df = pd.DataFrame(item_based_cf.sim)
+df = pd.read_csv('similarity_matrix_itembased.csv')
 print(df.shape)
 pca = PCA(n_components=512)
 reduced_sim = pca.fit_transform(df)
@@ -60,7 +60,7 @@ print(reduced_sim[0])
 #   print(user_predictions)
 # Connect to Elasticsearch
 
-"""
+
 es = Elasticsearch(
     [
         {
@@ -73,7 +73,7 @@ es = Elasticsearch(
 )
 
 # Create a new index with similarity is a dense vector
-es.indices.create(index='goodreads', body={
+es.indices.create(index='goodreads_item', body={
     "mappings": {
         "properties": {
             "similarity-vector": {
@@ -81,6 +81,11 @@ es.indices.create(index='goodreads', body={
                 "dims": 512,
                 "index": True,
                 "similarity": "l2_norm"
+            },
+            "rating": {
+                "type": "object",
+                "enabled": False
+
             }
         }
     }
@@ -89,8 +94,9 @@ es.indices.create(index='goodreads', body={
 
 # es.index(index='goodreads', id=1, body={'similarity': df.iloc[1].tolist()})
 # Index user based similarity matrix by user_id
-for i in range(0, nbUser):
-    es.index(index='goodreads', id=i, body={'similarity-vector': reduced_sim[i].tolist()})
+for i in range(0, nbBook):
+    json_rating_book = ds[ds['book_id'] == i]['rating'].tolist()
+    es.index(index='goodreads_item', id=i, body={'similarity-vector': reduced_sim[i].tolist(), 'rating': json_rating_book})
 # for i in range(0, nbUser):
 #    es.index(index='goodreads', doc_type='user', id=i, body={'similarity': df.iloc[i].tolist()})
 
@@ -98,4 +104,3 @@ for i in range(0, nbUser):
 # for user in user_predictions:
 #    es.index(index='user_similarity', doc_type='vector', body={'user_id': user_id, 'similar_user_id': user})
 #    print('User {} is similar to user {}'.format(user_id, user))
-"""
