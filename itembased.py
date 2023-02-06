@@ -25,28 +25,28 @@ ds = pd.read_csv('goodreads_interactions_reduced.csv')
 ds.to_csv('ratings.csv', index=False)
 nbUser = ds['user_id'].unique().shape[0]
 nbBook = ds['book_id'].unique().shape[0]
-#print("taux de donnée manquante: ", 100 - (ds.shape[0] / (nbUser * nbBook)) * 100, "%")
+print("taux de donnée manquante: ", 100 - (ds.shape[0] / (nbUser * nbBook)) * 100, "%")
 # ds = pd.read_csv('goodreads_interactions.csv')
 
-#print(ds.shape)
+print(ds.shape)
 # remove is_read column
 ds = ds.drop(columns=['is_read', 'is_reviewed'])
 
-#reader = Reader(rating_scale=(1, 5))
-#data = Dataset.load_from_df(ds, reader)
+reader = Reader(rating_scale=(1, 5))
+data = Dataset.load_from_df(ds, reader)
 
 # Build the user-based collaborative filtering model
 # user_based_cf = KNNWithMeans(k=5, sim_options={'user_based': True})
 # user_based_cf.fit(data.build_full_trainset())
-#item_based_cf = KNNBaseline(k=10, sim_options={'name':'pearson_baseline','user_based': False})
-#item_based_cf.fit(data.build_full_trainset())
+item_based_cf = KNNBaseline(k=10, sim_options={'name':'pearson_baseline','user_based': False})
+item_based_cf.fit(data.build_full_trainset())
 
 # save similarity matrix
 # user_based_cf.compute_similarities()
 
 # save to csv file
-#df = pd.DataFrame(item_based_cf.sim)
-df = pd.read_csv('similarity_matrix_itembased.csv')
+df = pd.DataFrame(item_based_cf.sim)
+df.to_csv('similarity_matrix_itembased.csv', index=False)
 print(df.shape)
 pca = PCA(n_components=512)
 reduced_sim = pca.fit_transform(df)
