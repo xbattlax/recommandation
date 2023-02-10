@@ -35,6 +35,25 @@ ds = ds.drop(columns=['is_read', 'is_reviewed'])
 reader = Reader(rating_scale=(1, 5))
 data = Dataset.load_from_df(ds, reader)
 
+# remove randomly 1 line per user and keep it in a test set
+test_set = []
+for user in ds['user_id'].unique():
+    user_ds = ds[ds['user_id'] == user]
+    # where rating is 5 or 4
+    if user_ds[user_ds['rating'] >= 3].shape[0] == 0:
+        continue
+    else :
+        user_ds = user_ds[user_ds['rating'] >= 3]
+    test_set.append(user_ds.iloc[random.randint(0, user_ds.shape[0]-1)])
+    ds = ds.drop(user_ds.iloc[random.randint(0, user_ds.shape[0]-1)].name)
+
+test_set = pd.DataFrame(test_set)
+
+# save test set in csv
+test_set.to_csv('test_set.csv', index=False)
+print(test_set.head())
+
+
 # Build the user-based collaborative filtering model
 user_based_cf = KNNWithMeans(k=5, sim_options={'user_based': True})
 user_based_cf.fit(data.build_full_trainset())
@@ -48,9 +67,6 @@ df.to_csv('similarity_matrix.csv', index=False)
 print(df.shape)
 pca = PCA(n_components=512)
 reduced_sim = pca.fit_transform(df)
-
-print(reduced_sim.shape)
-print(reduced_sim[0])
 # Make recommendations for a specific user
 #   user_id = 1
 #   print("make user rec for user_id: ", user_id)
@@ -58,7 +74,8 @@ print(reduced_sim[0])
 #   print(user_predictions)
 # Connect to Elasticsearch
 
-
+print("df",df.memory_usage(index=True).sum() / 1024 ** 2, "MB")
+print("ds",ds.memory_usage(index=True).sum() / 1024 ** 2, "MB")
 es = Elasticsearch(
     [
         {

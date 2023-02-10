@@ -62,8 +62,6 @@ for book in user_book:
 
 # combine all set
 
-
-
 set_book = set.union(*list_of_set)
 
 inter = set.intersection(set_book, unread_books)
