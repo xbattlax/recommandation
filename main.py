@@ -40,12 +40,12 @@ test_set = []
 for user in ds['user_id'].unique():
     user_ds = ds[ds['user_id'] == user]
     # where rating is 5 or 4
-    if user_ds[user_ds['rating'] == 3].shape[0] == 0:
+    if user_ds[user_ds['rating'] == 5].shape[0] == 0:
         continue
     else :
         user_ds = user_ds[user_ds['rating'] == 5]
-    test_set.append(user_ds.iloc[random.randint(0, user_ds.shape[0]-1)])
-    ds = ds.drop(user_ds.iloc[random.randint(0, user_ds.shape[0]-1)].name)
+        test_set.append(user_ds.iloc[random.randint(0, user_ds.shape[0]-1)])
+        ds = ds.drop(user_ds.iloc[random.randint(0, user_ds.shape[0]-1)].name)
 
 test_set = pd.DataFrame(test_set)
 
