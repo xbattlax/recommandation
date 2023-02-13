@@ -155,3 +155,9 @@ def evaluate_hybrid():
 if __name__ == '__main__':
     evaluate_user_based()
     #evaluate_hybrid()
+
+
+
+[{
+
+		"user_id":1,"book_id":1049,"rating":0},{"user_id":1,"book_id":1046,"rating":0},{"user_id":1,"book_id":1036,"rating":5},{"user_id":1,"book_id":1023,"rating":5},{"user_id":1,"book_id":1011,"rating":4},{"user_id":1,"book_id":994,"rating":5},{"user_id":1,"book_id":968,"rating":5},{"user_id":1,"book_id":961,"rating":0}]
